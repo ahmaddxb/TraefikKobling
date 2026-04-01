@@ -79,7 +79,7 @@ public class Worker(
 
         logger.LogInformation("Successfully retrieved {Number} tcp routers from {Server}",routers.Length, server.Name);
 
-        entries[$"traefik/tcp/services/{server.Name}/loadbalancer/servers/0/address"] = server.DestinationAddress.Authority;
+        entries[$"traefik/tcp/services/{server.Name}/loadbalancer/servers/0/address"] = $"{server.DestinationAddress.Host}:{server.DestinationAddress.Port}";
 
         foreach (var router in routers)
         {

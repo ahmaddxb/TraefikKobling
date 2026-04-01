@@ -79,15 +79,16 @@ public class Worker(
 
         logger.LogInformation("Successfully retrieved {Number} tcp routers from {Server}",routers.Length, server.Name);
 
-        entries[$"traefik/tcp/services/{server.Name}/loadbalancer/servers/0/url"] = server.DestinationAddress.ToString();
+        entries[$"traefik/tcp/services/{server.Name}/loadbalancer/servers/0/address"] = server.DestinationAddress.Authority;
 
         foreach (var router in routers)
         {
-            var name = router.Service;
+            var name = router.Name;
+            if (string.IsNullOrEmpty(name)) name = router.Service;
 
             if (name.Contains('@'))
                 name = $"{name.Split('@')[0]}_{server.Name}";
-
+            
             var registeredEntryPoints = 0;
             foreach (var (global,local) in server.EntryPoints)
             {
@@ -100,6 +101,10 @@ public class Worker(
             entries[$"traefik/tcp/routers/{name}/rule"] = router.Rule;
             entries[$"traefik/tcp/routers/{name}/service"] = server.Name;
 
+            if (router.Tls?.Passthrough ?? false)
+            {
+                entries[$"traefik/tcp/routers/{name}/tls/passthrough"] = "true";
+            }
         }
 
         return entries;
@@ -135,6 +140,7 @@ public class Worker(
         }
 
         logger.LogInformation("Successfully retrieved {Number} http routers from {Server}",routers.Length, server.Name);
+
         entries[$"traefik/http/services/{server.Name}/loadbalancer/servers/0/url"] = server.DestinationAddress.ToString();
 
         var middlewareNames = await GetMiddlewares(server, token);
@@ -145,7 +151,7 @@ public class Worker(
 
             if (name.Contains('@'))
                 name = $"{name.Split('@')[0]}_{server.Name}";
-
+            
             var registeredEntryPoints = 0;
             foreach (var (global,local) in server.EntryPoints)
             {
